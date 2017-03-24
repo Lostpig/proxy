@@ -40,6 +40,11 @@ module.exports = setup;
 function setup (server, options) {
   if (!server) server = http.createServer();
 
+  options = options || {};
+  if (options.target && !options.target instanceof url.Url) {
+    options.target = url.parse(options.target);
+  }
+
   var closure = function (context, fn) {
     return fn.bind(context, options);
   };

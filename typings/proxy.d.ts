@@ -7,7 +7,7 @@ import * as url from "url"
 
 declare namespace Proxy {
     export interface IProxyOptions {
-        target: string | url.Url
+        target?: string | url.Url
     }
     export interface ProxyServer extends http.Server {
         on(event: string, listener: Function): this
@@ -17,6 +17,6 @@ declare namespace Proxy {
     }
 }
 
-declare function setup (server: http.Server, options: Proxy.IProxyOptions): Proxy.ProxyServer
+declare function Proxy (server: http.Server, options?: Proxy.IProxyOptions): Proxy.ProxyServer
 
-export = setup
+export = Proxy
