@@ -3,6 +3,7 @@
   "version": "0.2.4",
   "description": "An HTTP proxy written with Node.js (think Squid)",
   "main": "proxy.js",
+  "types": "typings/proxy.d.ts",
   "scripts": {
     "test": "mocha --reporter spec"
   },
