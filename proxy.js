@@ -39,8 +39,12 @@ module.exports = setup;
 
 function setup (server, options) {
   if (!server) server = http.createServer();
-  server.on('request', onrequest);
-  server.on('connect', onconnect);
+
+  var closure = function (context, fn) {
+    return fn.bind(context, options);
+  };
+  server.on('request', closure(server, onrequest));
+  server.on('connect', closure(server, onconnect));
   return server;
 }
 
@@ -108,7 +112,7 @@ function eachHeader (obj, fn) {
  * HTTP GET/POST/DELETE/PUT, etc. proxy requests.
  */
 
-function onrequest (req, res) {
+function onrequest (options, req, res) {
   debug.request('%s %s HTTP/%s ', req.method, req.url, req.httpVersion);
   var server = this;
   var socket = req.socket;
@@ -125,7 +129,13 @@ function onrequest (req, res) {
       return;
     }
     if (!auth) return requestAuthorization(req, res);
+    
     var parsed = url.parse(req.url);
+    if (options.target) {
+      ['host', 'hostname', 'port', 'auth'].forEach(function (field) {
+        parsed[field] = options.target[field];
+      });
+    }
 
     // proxy the request HTTP method
     parsed.method = req.method;
@@ -208,9 +218,14 @@ function onrequest (req, res) {
     var proxyReq = http.request(parsed);
     debug.proxyRequest('%s %s HTTP/1.1 ', proxyReq.method, proxyReq.path);
 
+    proxyReq.on('socket', function (socket) {
+      server.emit('proxyReq', proxyReq, req, res);
+    });
     proxyReq.on('response', function (proxyRes) {
       debug.proxyResponse('HTTP/1.1 %s', proxyRes.statusCode);
       gotResponse = true;
+
+      server.emit('proxyRes', proxyRes, req, res);
 
       var headers = {};
       eachHeader(proxyRes, function (key, value) {
@@ -233,6 +248,9 @@ function onrequest (req, res) {
       res.writeHead(proxyRes.statusCode, headers);
       proxyRes.pipe(res);
       res.on('finish', onfinish);
+      proxyRes.on('end', function () {
+        server.emit('proxyEnd', req, res, proxyRes);
+      });
     });
     proxyReq.on('error', function (err) {
       debug.proxyResponse('proxy HTTP request "error" event\n%s', err.stack || err);
@@ -279,7 +297,7 @@ function onrequest (req, res) {
  * HTTP CONNECT proxy requests.
  */
 
-function onconnect (req, socket, head) {
+function onconnect (options, req, socket, head) {
   debug.request('%s %s HTTP/%s ', req.method, req.url, req.httpVersion);
   assert(!head || 0 == head.length, '"head" should be empty for proxy requests');
 
@@ -406,6 +424,11 @@ function onconnect (req, socket, head) {
     var host = parts[0];
     var port = +parts[1];
     var opts = { host: host, port: port };
+
+    if (options.target) {
+      opts.host = options.target.hostname;
+      opts.port = options.target.port;
+    }
 
     debug.proxyRequest('connecting to proxy target %j', opts);
     target = net.connect(opts);

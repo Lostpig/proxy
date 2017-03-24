@@ -1,0 +1,15 @@
+{
+    "parserOptions": {
+        "ecmaVersion": 6,
+        "sourceType": "module",
+        "ecmaFeatures": {
+
+        }
+    },
+    "rules": {
+        "semi": [2, "always"],
+        "quotes": [2, "single","avoid-escape"],
+        "key-spacing": [1 , {"align": "colon"} ],
+        "new-cap": [2, { "capIsNew": false }]
+    }
+}
