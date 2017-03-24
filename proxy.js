@@ -42,7 +42,11 @@ function setup (server, options) {
 
   options = options || {};
   if (options.target && !options.target instanceof url.Url) {
-    options.target = url.parse(options.target);
+    if (typeof options.target !== 'string' || options.target.trim().length === 0) {
+      options.target = null;
+    } else {
+      options.target = url.parse(options.target);
+    }
   }
 
   var closure = function (context, fn) {
