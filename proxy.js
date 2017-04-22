@@ -41,7 +41,7 @@ function setup (server, options) {
   if (!server) server = http.createServer();
 
   options = options || {};
-  if (options.target && !options.target instanceof url.Url) {
+  if (options.target && !(options.target instanceof url.Url)) {
     if (typeof options.target !== 'string' || options.target.trim().length === 0) {
       options.target = null;
     } else {
