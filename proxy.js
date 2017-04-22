@@ -45,6 +45,7 @@ function setup (server, options) {
     if (typeof options.target !== 'string' || options.target.trim().length === 0) {
       options.target = null;
     } else {
+      if (!options.target.startsWith('http')) options.target = 'http://' + options.target;
       options.target = url.parse(options.target);
     }
   }
@@ -141,9 +142,10 @@ function onrequest (options, req, res) {
     
     var parsed = url.parse(req.url);
     if (options.target) {
-      ['host', 'hostname', 'port', 'auth'].forEach(function (field) {
-        parsed[field] = options.target[field];
-      });
+      parsed['host'] = options.target['host'];
+      parsed['hostname'] = options.target['hostname'];
+      parsed['port'] = parseInt(options.target['port']);
+      parsed['auth'] = options.target['auth'];
     }
 
     // proxy the request HTTP method
@@ -312,6 +314,7 @@ function onconnect (options, req, socket, head) {
 
   var res;
   var target;
+  var targetMsg;
   var gotResponse = false;
 
   // define request socket event listeners
@@ -377,6 +380,10 @@ function onconnect (options, req, socket, head) {
     // up before this socket proxying is completed
     res = null;
 
+    if (targetMsg) {
+      target.write(targetMsg);
+      target.write(head);
+    }
     socket.pipe(target);
     target.pipe(socket);
   }
@@ -437,6 +444,13 @@ function onconnect (options, req, socket, head) {
     if (options.target) {
       opts.host = options.target.hostname;
       opts.port = options.target.port;
+
+      let remoteUrl = url.parse(`https://${req.url}`);
+      targetMsg = `CONNECT ${remoteUrl.hostname}:${remoteUrl.port} HTTP/${req.httpVersion}\r\n`;
+      for (const k in req.headers) {
+          targetMsg += `${k}: ${req.headers[k]}\r\n`;
+      }
+      targetMsg += '\r\n';
     }
 
     debug.proxyRequest('connecting to proxy target %j', opts);
